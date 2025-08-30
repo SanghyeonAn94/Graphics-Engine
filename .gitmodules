@@ -1,0 +1,3 @@
+[submodule "References/Renderers/Donut"]
+	path = References/Renderers/Donut
+	url = https://github.com/NVIDIA-RTX/Donut.git
