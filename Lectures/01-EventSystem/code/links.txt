@@ -1,0 +1,121 @@
+# Event System 관련 코드 파일들
+
+## 핵심 구현 파일들
+
+### 이벤트 기본 클래스
+../../Engine/Core/Events/Event.hpp
+- Event 기본 클래스와 CRTP 패턴
+- 게임 엔진 표준 이벤트 타입들 (KeyEvent, MouseEvent, WindowEvent 등)
+- EventTypeID 생성 및 타임스탬프 관리
+
+### 이벤트 디스패처 및 메시지 버스
+../../Engine/Core/Events/EventDispatcher.hpp
+- EventDispatcher 메인 클래스
+- Publisher-Subscriber 패턴 구현
+- 우선순위 기반 이벤트 처리 (Critical, High, Normal, Low, Background)
+- 동기/비동기 처리 모드 (Immediate, Queued, NextFrame)
+- EventSystem 싱글톤 및 전역 접근 인터페이스
+- EventScheduler 시간 기반 이벤트 스케줄링
+- ScopedEventListener RAII 패턴
+
+### 스레드 안전 큐 구현
+../../Engine/Core/Threading/ThreadSafeQueue.hpp
+- ThreadSafeQueue 기본 블로킹 큐
+- ThreadSafePriorityQueue 우선순위 큐
+- SPSCQueue Lock-free Single Producer Single Consumer
+- MPSCQueue Multi Producer Single Consumer
+- 다양한 동시성 패턴별 최적화된 구현
+
+## 기본 타입 및 유틸리티
+
+### 코어 타입 정의
+../../Engine/Core/Core.hpp
+- 기본 타입 정의 (uint32, EntityID, ComponentTypeID 등)
+- Component, System, RenderableObject 등 Concept 정의
+- RAII 래퍼 및 ScopeGuard 유틸리티
+- 컴파일 타임 문자열 해싱 함수
+
+### 타입 레지스트리
+../../Engine/Core/TypeRegistry.hpp
+- 컴파일 타임 타입 관리 시스템
+- ComponentSignature 비트 기반 타입 매칭
+- TypeInfo 구조체 및 자동 등록 메커니즘
+
+## 테스트 및 예제
+
+### 통합 테스트
+../../Tests/EventSystemTest.cpp
+- 전체 Event System 통합 테스트
+- 커스텀 이벤트 구현 예제 (PlayerDamagedEvent, GameStateChangedEvent)
+- 시스템별 이벤트 리스너 예제 (HealthSystem, UISystem, LoggingSystem)
+- Thread-Safe Queue 테스트
+- 성능 벤치마크 (초당 116만 이벤트 처리)
+
+### 기본 테스트
+../../Tests/HeaderTests.cpp
+- Core 시스템 기본 기능 테스트
+- Concept 검증 테스트
+- TypeRegistry 기능 테스트
+- RAII 패턴 테스트
+
+## 빌드 설정
+
+### CMake 설정
+../../CMakeLists.txt
+- C++23 모듈 빌드 설정
+- 헤더 기반 fallback 설정
+
+## 사용 예제 패턴
+
+### 이벤트 발생
+```cpp
+// 매크로 사용
+ENGINE_EMIT_EVENT(PlayerDamagedEvent, playerId, damage, attackerName);
+
+// 직접 호출
+EventSystem::emit<KeyEvent>(keyCode, KeyEvent::Action::Press);
+
+// 우선순위 지정
+EventSystem::emitQueued<WindowResizeEvent>(EventPriority::High, width, height);
+```
+
+### 이벤트 리스닝
+```cpp
+// 람다 리스너
+auto listener = EventSystem::listen<PlayerDamagedEvent>([](const PlayerDamagedEvent& event) {
+    // 처리 로직
+});
+
+// RAII 스코프 리스너
+ENGINE_SCOPED_LISTEN(GameStateChangedEvent, [](const GameStateChangedEvent& event) {
+    // 스코프 벗어나면 자동 해제
+});
+```
+
+### 스케줄된 이벤트
+```cpp
+// 지연 실행
+g_eventScheduler.scheduleEvent<MyEvent>(std::chrono::milliseconds(1000), 
+                                       EventPriority::Normal, eventData);
+
+// 반복 실행
+g_eventScheduler.scheduleRecurring<HeartbeatEvent>(std::chrono::seconds(1),
+                                                  EventPriority::Background);
+```
+
+## 확장 포인트
+
+### 커스텀 이벤트 생성
+- EventBase<YourEvent> 상속
+- toString() 오버라이드로 디버깅 지원
+- 필요한 데이터 멤버 추가
+
+### 커스텀 리스너 시스템
+- IEventListener 인터페이스 구현
+- 특화된 필터링 로직 추가
+- 성능 최적화된 콜백 메커니즘
+
+### 스레드 모델 확장
+- 커스텀 ThreadSafeQueue 구현
+- Lock-free 자료구조 추가
+- 메모리 순서 최적화
